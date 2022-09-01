@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+
+    <video id ="user-1" autoplay width="500px" height="500px" style="border:2px solid red ;margin: 10px;"></video>
+    <video id ="user-2" autoplay width="500px" height="500px" style="border:2px solid red ;margin: 10px;"></video>
+
+
+<br>
+
+
+
+    <button id="btn-offer">create Offer</button>
+    <label for="offer">SDP</label>
+    <textarea name="offer" id="createoffer" cols="30" rows="10"></textarea>
+
+
+
+<hr>
+
+    <button id="answer-btn" >create answer</button>
+    <label for="answer">ICP</label>
+    <textarea name="answer" id="create-answer" cols="30" rows="10"></textarea>
+<hr>
+
+    <button id="add-answer" >add answer</button>
+
+</body>
+<script>
+    let localstream;
+    let remoteStream;
+    let peerConnection;
+
+    let servers = {
+        iceServers :[
+            {
+                urls:['stun:stun1.1.google.com:19302','stun:stun2.1.google.com:19302']
+            }
+        ]
+    }
+    let init = async () =>{
+        localstream =await navigator.mediaDevices.getUserMedia({video:true,audio:false})
+        document.getElementById("user-1").srcObject = localstream
+    }
+
+
+
+    let createOffer= async ()=>{
+        peerConnection=new RTCPeerConnection(servers)
+        remoteStream = new MediaStream()
+        document.getElementById("user-2").srcObject = remoteStream
+
+        localstream.getTracks().forEach(track => {
+            peerConnection.addTrack(track,localstream)
+        });
+
+
+        peerConnection.ontrack = async (event)=>{
+            event.streams[0].getTracks().forEach(track=>{
+                remoteStream.addTrack(track)
+            })
+        }
+
+
+        peerConnection.onicecandidate = async (event)=>{
+            if(event.candidate){
+                document.getElementById("createoffer").value = JSON.stringify(peerConnection.localDescription)
+            }
+        }
+
+
+        let offer =await peerConnection.createOffer()
+
+        await peerConnection.setLocalDescription(offer)
+        document.getElementById("createoffer").value = JSON.stringify(offer)
+    }
+
+
+    let createAnswer = async ()=>{
+        peerConnection=new RTCPeerConnection(servers)
+        remoteStream = new MediaStream()
+        document.getElementById("user-2").srcObject = remoteStream
+
+        localstream.getTracks().forEach(track => {
+            peerConnection.addTrack(track,localstream)
+        });
+
+
+        peerConnection.ontrack = async (event)=>{
+            event.streams[0].getTracks().forEach(track=>{
+                remoteStream.addTrack(track)
+            })
+        }
+
+
+        peerConnection.onicecandidate = async (event)=>{
+            if(event.candidate){
+                document.getElementById("create-answer").value = JSON.stringify(peerConnection.localDescription)
+            }
+        }
+         
+
+
+        let offer = document.getElementById("createoffer").value
+
+        if(!offer) return alert("retrieve offer first")
+
+        offer = JSON.parse(offer)
+        
+        await peerConnection.setRemoteDescription(offer) 
+
+        let answer = await peerConnection.createAnswer()
+        await peerConnection.setLocalDescription(answer)
+
+        document.getElementById('create-answer').value =JSON.stringify(answer)
+
+    }
+
+
+
+
+    let addAnswer = async () =>{
+      let answer =   document.getElementById("create-answer").value
+
+      if(!answer) return alert("retrieve answer first")
+
+
+      answer = JSON.parse(answer)
+      
+      if(!peerConnection.currentRemoteDescription){
+            peerConnection.setRemoteDescription(answer)
+      }
+
+    }
+
+
+
+    init()
+    document.getElementById("btn-offer").addEventListener('click',createOffer)
+    document.getElementById("answer-btn").addEventListener('click',createAnswer)
+    document.getElementById("add-answer").addEventListener('click',addAnswer)
+</script>
+</html>
